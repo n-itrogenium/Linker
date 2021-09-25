@@ -18,6 +18,17 @@ Symbol* SymbolTable::find(string name) {
    return i->second;
 }
 
+Symbol* SymbolTable::find(int ordinal) {
+	std::map<string, Symbol*>::iterator i;
+	for (i = sectionTable.begin(); i != sectionTable.end(); i++)
+		if (i->second->ordinal == ordinal)
+			return i->second;
+	for (i = table.begin(); i != table.end(); i++)
+		if (i->second->ordinal == ordinal)
+			return i->second;
+	return nullptr;
+}
+
 void SymbolTable::insert(string name, string section, int locationCounter, char scope, bool isSection) {
 	if (isSection)
 		sectionTable[name] = new Symbol(name, section, locationCounter, scope);
@@ -63,7 +74,7 @@ void SymbolTable::printTable(std::ofstream &outfile) {
 		outfile << setw(15) << setfill(' ') << i->second->name;
 		outfile << setw(15) << setfill(' ') << i->second->section;
 		outfile << setw(10) << setfill(' ') << std::hex << i->second->offset << std::dec;
-		outfile << setw(10) << setfill(' ') << std::hex << i->second->size << std::dec;
+		outfile << setw(10) << setfill(' ') << i->second->size;
 		outfile << setw(10) << setfill(' ') << scope;
 		i->second->ordinal = ordinal++;
 		outfile << setw(10) << setfill(' ') << i->second->ordinal;

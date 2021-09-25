@@ -19,6 +19,8 @@ public:
 
 	Section(string name);
 	void addByte(int8_t newByte);
+	int checkByte(int8_t byte);
+	static void printHex(std::ofstream& outfile, std::map<string, Section*> sections, int startAddr);
 	static void printRelocationTable(std::ofstream& outfile, std::map<string, Section*> sections);
 	static void printSections(std::ostream& outfile, std::map<string, Section*> sections);
 };

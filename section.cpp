@@ -17,6 +17,39 @@ void Section::addByte(int8_t newByte) {
 	bytes.push_back(newByte);
 }
 
+int Section::checkByte(int8_t byte) {
+	for (int i = 0; i < relocationTable.size(); i++) {
+		if (relocationTable[i]->offset == byte) 
+			return relocationTable[i]->value;
+	}
+	return 0;
+}
+
+void Section::printHex(std::ofstream& outfile, std::map<string, Section*> sections, int startAddr) {
+	Section *merge = new Section("merge");
+	std::map<string, Section*>::iterator i;
+	for (i = sections.begin(); i != sections.end(); i++) {
+		Section* section = i->second;
+		for (int j = 0; j < section->bytes.size(); j++) {
+			merge->addByte(section->bytes[j]);
+		}
+	}
+	merge->size = merge->bytes.size();
+
+	std::stringstream sstream;
+	int currentAddr = startAddr;
+	outfile << "0000: ";
+	for (int j = 0; j < merge->size; j++) {
+		outfile << std::hex << setw(2) << setfill('0') << ((int) merge->bytes[j] & 0xFF);
+		if ((j+1) % 8 == 0)
+			outfile << endl << setw(4) << setfill('0') << std::hex << (currentAddr + 1) << ": ";
+		else
+		outfile << " ";
+		currentAddr++;
+	}
+	outfile << endl;
+}
+
 void Section::printRelocationTable(std::ofstream& outfile, std::map<string, Section*> sections) {
 	outfile << "===========================RELOCATION TABLE===========================" << endl;
 
@@ -44,7 +77,7 @@ void Section::printRelocationTable(std::ofstream& outfile, std::map<string, Sect
 }
 
 void Section::printSections(std::ostream& outfile, std::map<string, Section*> sections) {
-	outfile << "==========================SECTIONS==========================" << endl;
+	outfile << "===============================SECTIONS===============================" << endl;
 	std::map<string, Section*>::iterator i;
 	for (i = sections.begin(); i != sections.end(); i++) {
 		Section* section = i->second;

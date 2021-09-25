@@ -94,7 +94,7 @@ int main(int argc, char* argv[]) {
         infile.close();
     }
 
-    Linker::link(outfile);
+    Linker::link(outfile, hex);
     outfile.close();
 
 	std::cout << "Happy ending!" << std::endl;

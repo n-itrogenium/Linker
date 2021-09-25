@@ -25,6 +25,7 @@ public:
 	std::map<string, Symbol*> sectionTable;
 	std::map<string, Symbol*> table;
 	Symbol* find(string name);
+	Symbol* find(int ordinal);
 	void insert(Symbol* symbol, bool isSection);
 	void insert(string name, string section, int locationCounter, char scope, bool isSection);
 	bool isDefined();
