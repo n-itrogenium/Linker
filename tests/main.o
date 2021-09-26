@@ -1,0 +1,31 @@
+============================SYMBOL TABLE==============================
+          Label        Section     Value      Size     Scope   Ordinal
+----------------------------------------------------------------------
+         myCode         myCode         0        28         L         1
+         myData         myData         0         2         L         2
+      myCounter         myData         0                   G         3
+        myStart         myCode         0                   G         4
+        tim_cfg            abs      ff10                   L         5
+           wait         myCode         a                   L         6
+
+
+
+===========================RELOCATION TABLE===========================
+Section: myCode
+    Offset   Rel. type   Ordinal
+--------------------------------
+        13         ABS         2
+        25         ABS         1
+
+
+
+===============================SECTIONS===============================
+Section: myCode	[28 bytes]
+-----------------------------------------------
+a0 00 00 00 01 b0 00 04 ff 10 a0 10 04 00 00 a0
+10 00 00 05 74 01 52 f0 00 00 0a 00 
+
+Section: myData	[2 bytes]
+-----------------------------------------------
+00 00 
+

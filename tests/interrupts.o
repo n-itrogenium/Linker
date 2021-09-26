@@ -1,0 +1,48 @@
+============================SYMBOL TABLE==============================
+          Label        Section     Value      Size     Scope   Ordinal
+----------------------------------------------------------------------
+            isr            isr         0        62         L         1
+            ivt            ivt         0        16         L         2
+      asciiCode            abs        54                   L         3
+      isr_reset            isr         0                   L         4
+   isr_terminal            isr        16                   L         5
+      isr_timer            isr         5                   L         6
+      myCounter              ?         0                   G         7
+        myStart              ?         0                   G         8
+        term_in            abs      ff02                   L         9
+       term_out            abs      ff00                   L        10
+
+
+
+===========================RELOCATION TABLE===========================
+Section: isr
+    Offset   Rel. type   Ordinal
+--------------------------------
+         3         ABS         8
+        41      PC_REL         7
+        53         ABS         7
+
+
+
+Section: ivt
+    Offset   Rel. type   Ordinal
+--------------------------------
+         0         ABS         1
+         4         ABS         1
+         6         ABS         1
+
+
+
+===============================SECTIONS===============================
+Section: isr	[62 bytes]
+-----------------------------------------------
+50 f0 00 00 00 b0 60 12 a0 00 00 00 54 b0 00 04
+ff 00 a0 06 42 20 b0 60 12 b0 61 12 a0 00 04 ff
+02 b0 00 04 ff 00 a0 07 03 ff fe a0 10 00 00 01
+70 01 b0 00 04 00 00 a0 16 42 a0 06 42 20 
+
+Section: ivt	[16 bytes]
+-----------------------------------------------
+00 00 00 00 05 00 16 00 00 00 00 00 00 00 00 00
+
+
