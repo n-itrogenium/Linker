@@ -3,7 +3,6 @@
 
 #include <string>
 #include <map>
-#include "section.h"
 using std::string;
 
 class Symbol {
@@ -28,6 +27,7 @@ public:
 	Symbol* find(int ordinal);
 	void insert(Symbol* symbol, bool isSection);
 	void insert(string name, string section, int locationCounter, char scope, bool isSection);
+	void updateOrder();
 	bool isDefined();
 	//void updateValues();
 	void printTable(std::ofstream &outfile);

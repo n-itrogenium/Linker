@@ -17,12 +17,77 @@ void Section::addByte(int8_t newByte) {
 	bytes.push_back(newByte);
 }
 
-int Section::checkByte(int8_t byte) {
+int Section::checkByte(int byteIndex) {
 	for (int i = 0; i < relocationTable.size(); i++) {
-		if (relocationTable[i]->offset == byte) 
+		if (relocationTable[i]->offset == byteIndex) 
 			return relocationTable[i]->value;
 	}
 	return 0;
+}
+
+bool Section::isInstruction(int byteIndex) {
+	if (byteIndex < 3 || byteIndex > (size - 2))
+		return false;
+	uint8_t InstrDescr = bytes[byteIndex - 3];
+	uint8_t AddrMode = bytes[byteIndex - 1];
+	switch (InstrDescr) {
+		case 0x30:				// call
+		case 0x50: 				// jmp
+		case 0x51: 				// jeq
+		case 0x52: 				// jne
+		case 0x53: 				// jgt
+		case 0xA0: 				// ldr
+		case 0xB0: {			// str
+			switch (AddrMode) {
+				case 0x00:		// immed
+				case 0x03:		// regindpom
+				case 0x04:		// memdir
+				case 0x05:		// regdirpom
+					return true;
+				default: return false;
+			}
+			break;
+		}
+		default: return false;
+	}
+
+}
+
+void Section::updateRelocationOrdinal(std::map<string, Section*> sections, SymbolTable *symbolTable) {
+	std::map<string, Section*>::iterator i;
+	for (i = sections.begin(); i != sections.end(); i++) {
+		Section* section = i->second;
+		if (!section->relocationTable.empty()) {
+			for (int j = 0; j < section->relocationTable.size(); j++) {
+				Symbol* symbol = symbolTable->find(section->relocationTable[j]->symbol);
+				if ((symbol->name == symbol->section) || !symbol->defined)
+					section->relocationTable[j]->value = symbol->ordinal;
+				else
+					section->relocationTable[j]->value = symbolTable->find(symbol->section)->ordinal;
+			}
+		}
+	}
+}
+
+void Section::updateOffsets(std::map<string, Section*> sections, SymbolTable *symbolTable) {
+	std::map<string, Section*>::iterator i;
+	for (i = sections.begin(); i != sections.end(); i++) {
+		Section* section = i->second;
+		if (!section->relocationTable.empty()) {
+			for (int j = 0; j < section->relocationTable.size(); j++) {
+				int offset = symbolTable->find(section->relocationTable[j]->value)->offset;
+				Symbol* symbol = symbolTable->find(section->relocationTable[j]->value);
+				int byteIndex = section->relocationTable[j]->offset;
+				if (section->isInstruction(byteIndex)) {
+					section->bytes[byteIndex] = (((section->bytes[byteIndex] << 8) + offset) >> 8) & 0xFF;
+					section->bytes[byteIndex + 1] = (section->bytes[byteIndex + 1] + offset) & 0xFF;
+				} else {
+					section->bytes[byteIndex] = (section->bytes[byteIndex] + offset) & 0xFF;
+					section->bytes[byteIndex + 1] = (((section->bytes[byteIndex + 1] << 8) + offset) >> 8) & 0xFF;
+				}
+			}
+		}
+	}
 }
 
 void Section::printHex(std::ofstream& outfile, std::map<string, Section*> sections, int startAddr) {

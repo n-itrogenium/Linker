@@ -81,7 +81,6 @@ void Linker::processFile(std::ifstream &inputFile) {
         }
     }
 
-
     for (int i = 0; i < 3; i++)
         std::getline(inputFile, line);
 
@@ -112,12 +111,8 @@ void Linker::processFile(std::ifstream &inputFile) {
             Relocation *rel = new Relocation();
             rel->offset = stoi(offset);
             rel->type = (relType == "ABS") ? ABS : PC_REL;
-            Symbol *symbol = fileSymbolTable->find(stoi(value));
-            string symbolName = symbol->name;
-            // Proveriti da li ovo treba samo kad simbol nije poznat
-            //if (symbolName != symbol->section)
-            //    symbolName = symbol->section;
-            rel->value = symbolTable->find(symbolName)->ordinal;
+            rel->value = stoi(value);
+            rel->symbol = fileSymbolTable->find(stoi(value))->name;
             section->relocationTable.push_back(rel);
 
             rel->offset += fileSymbolTable->find(sectionName)->offset;
@@ -152,7 +147,14 @@ void Linker::processFile(std::ifstream &inputFile) {
                 ss >> byte;
                 int ordinal = section->checkByte(byteIndex);
                 if (ordinal != 0) {
-                    byte = (((byte << 8) + fileSymbolTable->find(ordinal)->offset) >> 8) & 0xFF;
+                    Symbol* symbol = fileSymbolTable->find(ordinal);
+                    if (!symbol->defined)
+                        symbol = symbolTable->find(symbol->name);
+                    if (section->isInstruction(byteIndex)) {
+                        byte = (((byte << 8) + symbol->offset) >> 8) & 0xFF;
+                    }
+                    else
+                        byte = (byte + symbol->offset) & 0xFF;
                     section->addByte(byte);
                     byteIndex++;
 
@@ -160,24 +162,29 @@ void Linker::processFile(std::ifstream &inputFile) {
                     std::stringstream ss;
                     ss << std::hex << _byte;
                     ss >> byte;
-                    byte = (byte + fileSymbolTable->find(ordinal)->offset) & 0xFF;
+                    if (section->isInstruction(byteIndex - 1)) {
+                        byte = (byte + symbol->offset) & 0xFF;
+                    }
+                    else 
+                        byte = (((byte << 8) + symbol->offset) >> 8) & 0xFF;
                 }
                 section->addByte(byte);
                 byteIndex++;
             }
         }
-    }
-    
+    }    
 }
 
 
-void Linker::link(std::ofstream& outputFile, bool isHex) {
-    if (!symbolTable->isDefined()) {
-		cerr << "ERROR! Symbols not defined" << endl;
-		//exit(3);
-	}
+void Linker::link(std::ofstream& outputFile, bool isHex, std::map<string, int> places) {
+    symbolTable->updateOrder();
+    Section::updateRelocationOrdinal(sections, symbolTable);
 
     if (isHex) {
+        if (!symbolTable->isDefined()) {
+		    cerr << "ERROR! Symbols not defined" << endl;
+		    exit(3);
+	    }
         int currentLocation = 0;
         std::map<string, Symbol*>::iterator i;
         for (i = symbolTable->sectionTable.begin(); i != symbolTable->sectionTable.end(); i++) {
@@ -192,6 +199,7 @@ void Linker::link(std::ofstream& outputFile, bool isHex) {
                     j->second->offset += i->second->offset;
             }
         }
+        Section::updateOffsets(sections, symbolTable);
         Section::printHex(outputFile, sections, 0);
     } else {
         symbolTable->printTable(outputFile);

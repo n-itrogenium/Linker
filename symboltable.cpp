@@ -43,6 +43,15 @@ void SymbolTable::insert(Symbol *symbol, bool isSection) {
 		table[symbol->name] = symbol;
 }
 
+void SymbolTable::updateOrder() {
+	int ordinal = 1;
+	std::map<string, Symbol*>::iterator i;
+	for (i = sectionTable.begin(); i != sectionTable.end(); i++)
+		i->second->ordinal = ordinal++;
+	for (i = table.begin(); i != table.end(); i++)
+		i->second->ordinal = ordinal++;
+}
+
 bool SymbolTable::isDefined() {
 	std::map<string, Symbol*>::iterator i;
 	for (i = table.begin(); i != table.end(); i++)
@@ -68,7 +77,6 @@ void SymbolTable::printTable(std::ofstream &outfile) {
 	outfile << std::endl << "----------------------------------------------------------------------" << std::endl;
 
 	std::map<string, Symbol*>::iterator i;
-	int ordinal = 1;
 	for (i = sectionTable.begin(); i != sectionTable.end(); i++) {
 		char scope = (i->second->scope == 'E') ? 'G' : i->second->scope;
 		outfile << setw(15) << setfill(' ') << i->second->name;
@@ -76,7 +84,6 @@ void SymbolTable::printTable(std::ofstream &outfile) {
 		outfile << setw(10) << setfill(' ') << std::hex << i->second->offset << std::dec;
 		outfile << setw(10) << setfill(' ') << i->second->size;
 		outfile << setw(10) << setfill(' ') << scope;
-		i->second->ordinal = ordinal++;
 		outfile << setw(10) << setfill(' ') << i->second->ordinal;
 		outfile << std::endl;
 	}
@@ -86,7 +93,6 @@ void SymbolTable::printTable(std::ofstream &outfile) {
 		outfile << setw(15) << setfill(' ') << i->second->section;
 		outfile << setw(10) << setfill(' ') << std::hex << i->second->offset << std::dec;
 		outfile << setw(20) << setfill(' ') << scope;
-		i->second->ordinal = ordinal++;
 		outfile << setw(10) << setfill(' ') << i->second->ordinal;
 		outfile << std::endl;
 	}

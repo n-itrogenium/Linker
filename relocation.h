@@ -8,6 +8,7 @@ public:
 	int offset;
 	RelocationType type;
 	int value;
+	std::string symbol;
 };
 
 #endif
