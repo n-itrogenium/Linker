@@ -17,12 +17,12 @@ void Section::addByte(int8_t newByte) {
 	bytes.push_back(newByte);
 }
 
-int Section::checkByte(int byteIndex) {
+Relocation* Section::checkByte(int byteIndex) {
 	for (int i = 0; i < relocationTable.size(); i++) {
 		if (relocationTable[i]->offset == byteIndex) 
-			return relocationTable[i]->value;
+			return relocationTable[i];
 	}
-	return 0;
+	return nullptr;
 }
 
 bool Section::isInstruction(int byteIndex) {
@@ -50,7 +50,16 @@ bool Section::isInstruction(int byteIndex) {
 		}
 		default: return false;
 	}
+}
 
+bool Section::isOffset(int byteIndex) {
+	if (byteIndex < 3 || byteIndex > (size - 2))
+		return false;
+	uint8_t AddrMode = bytes[byteIndex - 1];
+	if (AddrMode == 0x03 ||		// regindpom
+		AddrMode == 0x05)		// regdirpom
+		return true;
+	return false;
 }
 
 void Section::updateRelocationOrdinal(std::map<string, Section*> sections, SymbolTable *symbolTable) {
@@ -76,40 +85,53 @@ void Section::updateOffsets(std::map<string, Section*> sections, SymbolTable *sy
 		if (!section->relocationTable.empty()) {
 			for (int j = 0; j < section->relocationTable.size(); j++) {
 				int offset = symbolTable->find(section->relocationTable[j]->value)->offset;
+				int sectionOffset = symbolTable->find(section->name)->offset;
 				Symbol* symbol = symbolTable->find(section->relocationTable[j]->value);
 				int byteIndex = section->relocationTable[j]->offset;
+				int pc_rel = (section->relocationTable[j]->type == PC_REL) ? (byteIndex + sectionOffset) : 0;
 				if (section->isInstruction(byteIndex)) {
-					section->bytes[byteIndex] = (((section->bytes[byteIndex] << 8) + offset) >> 8) & 0xFF;
-					section->bytes[byteIndex + 1] = (section->bytes[byteIndex + 1] + offset) & 0xFF;
+					int operand = ((section->bytes[byteIndex] << 8) | (section->bytes[byteIndex + 1] & 0xFF)) & 0xFFFF;
+					operand = operand - pc_rel + offset;
+					section->bytes[byteIndex] = (operand >> 8) & 0xFF;
+					section->bytes[byteIndex + 1] = operand & 0xFF;
+					//section->bytes[byteIndex] = (((section->bytes[byteIndex] << 8) - pc_rel + offset) >> 8) & 0xFF;
+					//section->bytes[byteIndex + 1] = (section->bytes[byteIndex + 1] - pc_rel + offset) & 0xFF;
 				} else {
-					section->bytes[byteIndex] = (section->bytes[byteIndex] + offset) & 0xFF;
-					section->bytes[byteIndex + 1] = (((section->bytes[byteIndex + 1] << 8) + offset) >> 8) & 0xFF;
+					section->bytes[byteIndex] = (section->bytes[byteIndex] - pc_rel + offset) & 0xFF;
+					section->bytes[byteIndex + 1] = (((section->bytes[byteIndex + 1] << 8) - pc_rel + offset) >> 8) & 0xFF;
 				}
 			}
 		}
 	}
 }
 
-void Section::printHex(std::ofstream& outfile, std::map<string, Section*> sections, int startAddr) {
+void Section::printHex(std::ofstream& outfile, std::map<int, Section*> sections, int startAddr, SymbolTable* symbolTable) {
 	Section *merge = new Section("merge");
-	std::map<string, Section*>::iterator i;
+	int currentAddr = startAddr;
+	std::map<int, Section*>::iterator i;
 	for (i = sections.begin(); i != sections.end(); i++) {
 		Section* section = i->second;
+		int sectionOffset = symbolTable->find(section->name)->offset;
+		while (sectionOffset > currentAddr) {
+			merge->addByte(0);
+			currentAddr++;
+		}
 		for (int j = 0; j < section->bytes.size(); j++) {
 			merge->addByte(section->bytes[j]);
+			currentAddr++;
 		}
 	}
 	merge->size = merge->bytes.size();
 
 	std::stringstream sstream;
-	int currentAddr = startAddr;
-	outfile << "0000: ";
+	currentAddr = startAddr;
+	outfile << setw(4) << setfill('0') << std::hex << startAddr << ": ";
 	for (int j = 0; j < merge->size; j++) {
 		outfile << std::hex << setw(2) << setfill('0') << ((int) merge->bytes[j] & 0xFF);
 		if ((j+1) % 8 == 0)
 			outfile << endl << setw(4) << setfill('0') << std::hex << (currentAddr + 1) << ": ";
 		else
-		outfile << " ";
+			outfile << " ";
 		currentAddr++;
 	}
 	outfile << endl;

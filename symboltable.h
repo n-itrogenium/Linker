@@ -16,6 +16,7 @@ public:
 	char scope;
 	bool defined;
 	bool absolute;
+	bool fixed;
 	Symbol(string name, string section, int offset, char scope);
 };
 

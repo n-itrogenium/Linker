@@ -11,7 +11,7 @@ using std::string;
 int main(int argc, char* argv[]) {
     bool enableOptions = true;
     std::vector<string> inputFiles = std::vector<string>();
-    std::map<string, int> sectionLocations = std::map<string, int>();
+    std::map<int, string> sectionLocations = std::map<int, string>();
     string outputFile = "linker_output";
     bool linkable = false;
     bool hex = false;
@@ -60,9 +60,11 @@ int main(int argc, char* argv[]) {
 		            exit(1);
                 }
                 else {
+                    int location;
                     std::stringstream ss;
 				    ss << std::hex << address;
-				    ss >> sectionLocations[section];
+				    ss >> location;
+                    sectionLocations[location] = section;
                 }
             }
 

@@ -10,7 +10,7 @@ public:
     static std::map<string, Section*> sections;
 	static bool end;
 	static void processFile(std::ifstream &inputFile);
-    static void link(std::ofstream &outputFile, bool isHex, std::map<string, int> places);
+    static void link(std::ofstream &outputFile, bool isHex, std::map<int, string> sectionLocations);
 };
 
 #endif

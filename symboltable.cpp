@@ -106,4 +106,5 @@ Symbol::Symbol(string name, string section, int offset, char scope) {
 	this->section = section;
 	this->defined = (section != "?");
 	this->absolute = (section == "abs");
+	this->fixed = false;
 }

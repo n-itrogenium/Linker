@@ -145,28 +145,45 @@ void Linker::processFile(std::ifstream &inputFile) {
                 std::stringstream ss;
                 ss << std::hex << _byte;
                 ss >> byte;
-                int ordinal = section->checkByte(byteIndex);
-                if (ordinal != 0) {
-                    Symbol* symbol = fileSymbolTable->find(ordinal);
+                Relocation* rel = section->checkByte(byteIndex);
+                if (rel) {
+                    Symbol* symbol = fileSymbolTable->find(rel->value);
                     if (!symbol->defined)
                         symbol = symbolTable->find(symbol->name);
+
+                    bool negative = false;
                     if (section->isInstruction(byteIndex)) {
-                        byte = (((byte << 8) + symbol->offset) >> 8) & 0xFF;
+                        // Negative
+                        if (section->isOffset(byteIndex) && byte & 0x90 != 0)
+                            negative = true;
+                        // Positive
+                        else
+                            byte = (((byte << 8) + symbol->offset) >> 8) & 0xFF;
                     }
                     else
                         byte = (byte + symbol->offset) & 0xFF;
-                    section->addByte(byte);
+                    if (!negative)
+                        section->addByte(byte);
                     byteIndex++;
 
+                    int byte2;
                     iss >> _byte;
                     std::stringstream ss;
                     ss << std::hex << _byte;
-                    ss >> byte;
+                    ss >> byte2;
                     if (section->isInstruction(byteIndex - 1)) {
-                        byte = (byte + symbol->offset) & 0xFF;
+                        if (negative) {
+                            int8_t operand = (((int8_t) byte & 0xFF00) << 8) | ((int8_t) byte2 & 0xFF);
+                            operand += symbol->offset;
+                            section->addByte(operand >> 8 & 0xFF);
+                            byte = operand & 0xFF;
+                        } 
+                        else
+                            byte = (byte2 + symbol->offset) & 0xFF;
                     }
                     else 
-                        byte = (((byte << 8) + symbol->offset) >> 8) & 0xFF;
+                        byte = (((byte2 << 8) + symbol->offset) >> 8) & 0xFF;
+                    
                 }
                 section->addByte(byte);
                 byteIndex++;
@@ -176,7 +193,7 @@ void Linker::processFile(std::ifstream &inputFile) {
 }
 
 
-void Linker::link(std::ofstream& outputFile, bool isHex, std::map<string, int> places) {
+void Linker::link(std::ofstream& outputFile, bool isHex, std::map<int, string> sectionLocations) {
     symbolTable->updateOrder();
     Section::updateRelocationOrdinal(sections, symbolTable);
 
@@ -185,23 +202,54 @@ void Linker::link(std::ofstream& outputFile, bool isHex, std::map<string, int> p
 		    cerr << "ERROR! Symbols not defined" << endl;
 		    exit(3);
 	    }
+
+        // Fixed sections
+        std::map<int, string>::iterator k;
         int currentLocation = 0;
-        std::map<string, Symbol*>::iterator i;
-        for (i = symbolTable->sectionTable.begin(); i != symbolTable->sectionTable.end(); i++) {
-            if (i == symbolTable->sectionTable.begin())
-                i->second->offset = 0;
-            i->second->offset += currentLocation;
-            currentLocation += i->second->size;
-            
+        for (k = sectionLocations.begin(); k != sectionLocations.end(); k++) {
+            Symbol *section = symbolTable->find(k->second);
+            if (!section) {
+                cerr << "ERROR! Section not found: " << k->second << endl;
+                exit(3);
+            }
+            if (k->first < currentLocation) {
+                cerr << "ERROR! Sections are overlapping" << endl;
+                exit(3);
+            }
+            currentLocation = k->first + section->size;
+            section->offset = k->first;
+            section->fixed = true;
+
             std::map<string, Symbol*>::iterator j;
             for (j = symbolTable->table.begin(); j != symbolTable->table.end(); j++) {
-                if (j->second->section == i->second->name)
-                    j->second->offset += i->second->offset;
+                if (j->second->section == section->name)
+                    j->second->offset += section->offset;
             }
         }
+
+        // Other sections
+        std::map<string, Symbol*>::iterator i;
+        for (i = symbolTable->sectionTable.begin(); i != symbolTable->sectionTable.end(); i++) {
+            if (!i->second->fixed) {
+                i->second->offset += currentLocation;
+                currentLocation += i->second->size;
+                
+                std::map<string, Symbol*>::iterator j;
+                for (j = symbolTable->table.begin(); j != symbolTable->table.end(); j++) {
+                    if (j->second->section == i->second->name)
+                        j->second->offset += i->second->offset;
+                }
+            }
+        }
+        std::map<int, Section*> _sections;
+        for (i = symbolTable->sectionTable.begin(); i != symbolTable->sectionTable.end(); i++)
+            _sections[i->second->offset] = sections.find(i->second->name)->second;
+        
+        int startAddr = (sectionLocations.empty()) ? 0 : sectionLocations.begin()->first;
         Section::updateOffsets(sections, symbolTable);
-        Section::printHex(outputFile, sections, 0);
-    } else {
+        Section::printHex(outputFile, _sections, startAddr, symbolTable);
+    }
+    else {
         symbolTable->printTable(outputFile);
         Section::printRelocationTable(outputFile, sections);
         Section::printSections(outputFile, sections); 

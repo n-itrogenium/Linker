@@ -20,11 +20,12 @@ public:
 
 	Section(string name);
 	void addByte(int8_t newByte);
-	int checkByte(int byteIndex);
+	Relocation* checkByte(int byteIndex);
 	bool isInstruction(int byteIndex);
+	bool isOffset(int byteIndex);
 	static void updateRelocationOrdinal(std::map<string, Section*> sections, SymbolTable *symbolTable);
 	static void updateOffsets(std::map<string, Section*> sections, SymbolTable *symbolTable);
-	static void printHex(std::ofstream& outfile, std::map<string, Section*> sections, int startAddr);
+	static void printHex(std::ofstream& outfile, std::map<int, Section*> sections, int startAddr, SymbolTable *symbolTable);
 	static void printRelocationTable(std::ofstream& outfile, std::map<string, Section*> sections);
 	static void printSections(std::ostream& outfile, std::map<string, Section*> sections);
 };
