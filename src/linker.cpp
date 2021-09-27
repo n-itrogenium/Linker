@@ -189,6 +189,7 @@ void Linker::link(std::ofstream& outputFile, bool isHex, std::map<int, string> s
 		    cerr << "ERROR! Symbols not defined" << endl;
 		    exit(3);
 	    }
+        int maxAddr = 0xFFFF;
 
         // Fixed sections
         std::map<int, string>::iterator k;
@@ -204,6 +205,10 @@ void Linker::link(std::ofstream& outputFile, bool isHex, std::map<int, string> s
                 exit(3);
             }
             currentLocation = k->first + section->size;
+            if (currentLocation > maxAddr) {
+                cerr << "ERROR! Section out of bound: " << k->second << endl;
+                exit(3);
+            }
             section->offset = k->first;
             section->fixed = true;
 
@@ -220,7 +225,10 @@ void Linker::link(std::ofstream& outputFile, bool isHex, std::map<int, string> s
             if (!i->second->fixed) {
                 i->second->offset += currentLocation;
                 currentLocation += i->second->size;
-                
+                if (currentLocation > maxAddr) {
+                    cerr << "ERROR! Section out of bound: " << i->second->name << endl;
+                    exit(3);
+                }
                 std::map<string, Symbol*>::iterator j;
                 for (j = symbolTable->table.begin(); j != symbolTable->table.end(); j++) {
                     if (j->second->section == i->second->name)
