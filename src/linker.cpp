@@ -151,39 +151,26 @@ void Linker::processFile(std::ifstream &inputFile) {
                     if (!symbol->defined)
                         symbol = symbolTable->find(symbol->name);
 
-                    bool negative = false;
-                    if (section->isInstruction(byteIndex)) {
-                        // Negative
-                        if (section->isOffset(byteIndex) && byte & 0x90 != 0)
-                            negative = true;
-                        // Positive
-                        else
-                            byte = (((byte << 8) + symbol->offset) >> 8) & 0xFF;
-                    }
-                    else
-                        byte = (byte + symbol->offset) & 0xFF;
-                    if (!negative)
-                        section->addByte(byte);
-                    byteIndex++;
-
                     int byte2;
                     iss >> _byte;
                     std::stringstream ss;
                     ss << std::hex << _byte;
                     ss >> byte2;
-                    if (section->isInstruction(byteIndex - 1)) {
-                        if (negative) {
-                            int8_t operand = (((int8_t) byte & 0xFF00) << 8) | ((int8_t) byte2 & 0xFF);
-                            operand += symbol->offset;
-                            section->addByte(operand >> 8 & 0xFF);
-                            byte = operand & 0xFF;
-                        } 
-                        else
-                            byte = (byte2 + symbol->offset) & 0xFF;
+
+                    int8_t operand;
+                    if (section->isInstruction(byteIndex)) {
+                        operand = (((int8_t) byte << 8) & 0xFF00) | ((int8_t) byte2 & 0xFF);
+                        operand += symbol->offset;
+                        section->addByte(operand >> 8 & 0xFF);
+                        byte = operand & 0xFF;
                     }
-                    else 
-                        byte = (((byte2 << 8) + symbol->offset) >> 8) & 0xFF;
-                    
+                    else {
+                        operand = (((int8_t) byte2 << 8) & 0xFF00) | ((int8_t) byte & 0xFF);
+                        operand += symbol->offset;
+                        section->addByte(operand & 0xFF);
+                        byte = operand >> 8 & 0xFF;
+                    }
+                    byteIndex++;                    
                 }
                 section->addByte(byte);
                 byteIndex++;

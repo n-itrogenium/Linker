@@ -94,11 +94,11 @@ void Section::updateOffsets(std::map<string, Section*> sections, SymbolTable *sy
 					operand = operand - pc_rel + offset;
 					section->bytes[byteIndex] = (operand >> 8) & 0xFF;
 					section->bytes[byteIndex + 1] = operand & 0xFF;
-					//section->bytes[byteIndex] = (((section->bytes[byteIndex] << 8) - pc_rel + offset) >> 8) & 0xFF;
-					//section->bytes[byteIndex + 1] = (section->bytes[byteIndex + 1] - pc_rel + offset) & 0xFF;
 				} else {
-					section->bytes[byteIndex] = (section->bytes[byteIndex] - pc_rel + offset) & 0xFF;
-					section->bytes[byteIndex + 1] = (((section->bytes[byteIndex + 1] << 8) - pc_rel + offset) >> 8) & 0xFF;
+					int operand = ((section->bytes[byteIndex + 1] << 8) | (section->bytes[byteIndex] & 0xFF)) & 0xFFFF;
+					operand += offset;
+					section->bytes[byteIndex] = operand & 0xFF;
+					section->bytes[byteIndex + 1] = (operand >> 8) & 0xFF;
 				}
 			}
 		}
